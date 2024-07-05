@@ -24,11 +24,9 @@ jobs:
     # 使用最新的 Ubuntu 操作系统作为运行环境
     runs-on: ubuntu-latest
     steps:
-    # 从远程仓库 checkout 到本地
     - name: Checkout
       uses: actions/checkout@v4
       with:
-          # 使用密钥访问仓库
           token: ${{ secrets.LIVELIST }}
 
     # 获取当前时间并存储为环境变量
