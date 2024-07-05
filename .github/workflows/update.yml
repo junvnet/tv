@@ -1,66 +1,97 @@
+# 设置工作流的名称
 name: Update
 
+# 设置工作流的触发条件
 on:
+  # 当有人 star 这个仓库时触发
   watch:
     types: [started]
+  # 定期任务
   schedule:
-    - cron: 0
+    # 每天的 cron job，实际写法有问题，应该明确指定具体时间
+    - cron: '0 * * * *'
+  # 手动触发
   workflow_dispatch:
 
+# 环境变量设置
 env:
+  # 设置时区为亚洲/上海
   TZ: Asia/Shanghai
 
+# 定义每个任务
 jobs:
   Update:
+    # 使用最新的 Ubuntu 操作系统作为运行环境
     runs-on: ubuntu-latest
     steps:
+    # 从远程仓库 checkout 到本地
     - name: Checkout
       uses: actions/checkout@v4
       with:
+          # 使用密钥访问仓库
           token: ${{ secrets.LIVELIST }}
 
+    # 获取当前时间并存储为环境变量
     - name: GetTime
       run: echo "DATE=$(date +'%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_ENV
 
+    # 执行更新操作
     - name: Update
       run: |
-        # 央视源
+        # 更新央视源
         rm -f CCTV.m3u && wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CCTV.m3u
+        # 只保留含有“央视频道”及其下一行的数据
         sed -i -n '/央视频道/,+1p' CCTV.m3u
+        # 在文件开头添加EXTM3U头
         sed -i '1i #EXTM3U' CCTV.m3u
+        # 删除空白行
         sed -i '/^\s*$/d' CCTV.m3u
 
-        # 卫视源
+        # 更新卫视频源
         rm -f CNTV.m3u && touch CNTV.m3u
         wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV1.m3u && sed -i -n '/卫视频道/,+1p' CNTV1.m3u
         wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV2.m3u && sed -i -n '/数字频道/,+1p' CNTV2.m3u
         cat CNTV1.m3u >> CNTV.m3u
         cat CNTV2.m3u >> CNTV.m3u
         rm -f CNTV1.m3u CNTV2.m3u
+        # 在文件开头添加EXTM3U头
         sed -i '1i #EXTM3U' CNTV.m3u
+        # 删除空白行
         sed -i '/^\s*$/d' CNTV.m3u
 
         # 整合源
         rm -f IPTV.m3u && touch IPTV.m3u
+        # 将央视源和卫视频源合并
         cat CCTV.m3u >> IPTV.m3u
         cat CNTV.m3u >> IPTV.m3u
+        # 删除多余的EXTM3U头
         sed -i '/#EXTM3U/d' IPTV.m3u
         sed -i '1i #EXTM3U' IPTV.m3u
+        # 删除空白行
         sed -i '/^\s*$/d' IPTV.m3u
 
-        # 节目源
+        # 更新节目源
         rm -f EPG.xml && wget https://epg.112114.xyz/pp.xml -O EPG.xml
-        echo "Auto Update IPTV(ipv6) in $DATE,基于Moexin/IPTV项目修改,国内直播源同步fanmingming/live" > README.md
+        # 更新 README 文件
+        echo "Auto Update IPTV(ipv6) in $DATE,国内直播源同步fanmingming/live" > README.md
 
+    # 提交更新的文件
     - name: Clean
       run: |
+        # 设置 git 提交用户信息
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
+        # 创建一个新的分支
         git checkout --orphan latest_branch
+        # 添加所有更改
         git add -A
+        # 提交更改并使用当前日期作为提交信息
         git commit -am "$DATE"
+        # 删除 main 分支
         git branch -D main
+        # 重命名最新的分支为 main
         git branch -m main
 
+    # 将更改推送到远程仓库 main 分支
     - name: Push
       run: git push -f origin main
