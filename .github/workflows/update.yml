@@ -25,9 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-      with:
-          token: ${{ secrets.LIVELIST }}
+      uses: actions/checkout@v3
 
     # 获取当前时间并存储为环境变量
     - name: GetTime
