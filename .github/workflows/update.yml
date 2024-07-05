@@ -1,11 +1,11 @@
+
 name: Update
 
 on:
   watch:
     types: [started]
   schedule:
-    - cron: '0 * * * 1'
-  workflow_dispatch:
+    - cron: 0,30 * * * *
 
 env:
   TZ: Asia/Shanghai
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
 
     - name: GetTime
       id: date
@@ -25,15 +25,15 @@ jobs:
       run: |
         # 央视源
         rm -f CCTV.m3u && wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CCTV.m3u
-        sed -i -n '/央视频道/,+1p' CCTV.m3u
+        sed -i -n '/央视/,+1p' CCTV.m3u
         sed -i '1i #EXTM3U' CCTV.m3u
         sed -i '/^\s*$/d' CCTV.m3u
 
         # 卫视源
         rm -f CNTV.m3u && touch CNTV.m3u
-        wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV1.m3u && sed -i -n '/卫视频道/,+1p' CNTV1.m3u
-        wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV2.m3u && sed -i -n '/NewTV系列/,+1p' CNTV2.m3u
-        wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV3.m3u && sed -i -n '/超清频道/,+1p' CNTV3.m3u
+        wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV1.m3u && sed -i -n '/卫视/,+1p' CNTV1.m3u
+        wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV2.m3u && sed -i -n '/数字/,+1p' CNTV2.m3u
+        wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV3.m3u && sed -i -n '/百视/,+1p' CNTV3.m3u
         cat CNTV1.m3u >> CNTV.m3u
         cat CNTV2.m3u >> CNTV.m3u
         cat CNTV3.m3u >> CNTV.m3u
@@ -42,58 +42,39 @@ jobs:
         sed -i '/^\s*$/d' CNTV.m3u
 
         # 成人源
-        # rm -f Adult.m3u && wget http://adultiptv.net/chs.m3u -O Adult.m3u
-        # sed -i 's/XXX/成人频道/' Adult.m3u
-        # sed -i 's/AdultIPTV.net //g' Adult.m3u
+        rm -f Adult.m3u && wget http://adultiptv.net/chs.m3u -O Adult.m3u
+        sed -i -n '/XXX/,+1p' Adult.m3u
+        sed -i 's/XXX/成人频道/' Adult.m3u
+        sed -i 's/AdultIPTV.net //g' Adult.m3u
         # wget https://raw.githubusercontent.com/YanG-1989/m3u/main/Adult.m3u -O AdultVideo.txt
         # sed -i -n '/日本/,+1p' AdultVideo.txt
         # sed -i 's/日本/成人视频/' AdultVideo.txt
         # echo '' >> Adult.m3u && cat AdultVideo.txt >> Adult.m3u
         # rm -f AdultVideo.txt
-        # sed -i '/^\s*$/d' Adult.m3u
+        sed -i '/^\s*$/d' Adult.m3u
 
-        #4K源
-        rm -f 4k.m3u && wget https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u -O 4k.m3u
-        rm -f 4k.txt && wget https://raw.githubusercontent.com/YanG-1989/m3u/main/Gather.m3u -O 4k.txt
-        sed -i -n '/4K/,+1p' 4k.m3u
-        sed -i -n '/4k/,+1p' 4k.txt
-        echo '' >> 4k.m3u && cat 4k.txt >> 4k.m3u
-        rm -f 4k.txt
-        rm -f 4K.txt
-        sed -i '1i #EXTM3U' 4k.m3u
-        sed -i '/^\s*$/d' 4k.m3u
-
-        # 整合源（无成人）
+        # 整合源
         rm -f IPTV.m3u && touch IPTV.m3u
         cat CCTV.m3u >> IPTV.m3u
         cat CNTV.m3u >> IPTV.m3u
-        # cat Adult.m3u >> IPTV.m3u
-        # 移除成人整合源
+        cat Adult.m3u >> IPTV.m3u
         sed -i '/#EXTM3U/d' IPTV.m3u
         sed -i '1i #EXTM3U' IPTV.m3u
         sed -i '/^\s*$/d' IPTV.m3u
 
-        # 整合源
-        rm -f IPTV-all.m3u && touch IPTV-all.m3u
-        cat CCTV.m3u >> IPTV-all.m3u
-        cat CNTV.m3u >> IPTV-all.m3u
-        cat Adult.m3u >> IPTV-all.m3u
-        sed -i '/#EXTM3U/d' IPTV-all.m3u
-        sed -i '1i #EXTM3U' IPTV-all.m3u
-        sed -i '/^\s*$/d' IPTV-all.m3u
-        
         # 节目源
         rm -f EPG.xml && wget https://epg.112114.xyz/pp.xml -O EPG.xml
-        # readme.md
-        echo "Auto Update IPTV in ${{ env.date }} 修改自Moexin/IPTV  https://cdn.jsdelivr.net/gh/vicjl/myIPTV/" > README.md
+        echo "Auto Update IPTV in ${{ steps.date.outputs.date }}" > README.md
 
-    - name: Commit and Push changes
-      env:
-        TOKEN: ${{ secrets.List }}
-      run: 
+    - name: Clean
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
         git checkout --orphan latest_branch
         git add -A
-        git commit -m "${{ steps.date.outputs.date }}"
-        git branch -D main
-        git branch -m main
-        git push -f https://x-access-token:${{ secrets.List }}@github.com/junvnet/tv.git main
+        git commit -am "${{ steps.date.outputs.date }}"
+        git branch -D Files
+        git branch -m Files
+
+    - name: Push
+      run: git push -f origin Files
